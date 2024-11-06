@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>랜덤 숫자 뽑기</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 첫번째 영역: 제목 -->
+        <div class="section title">
+            <h1>발표순서정하기</h1>
+        </div>
+
+        <!-- 두번째 영역: 시작번호, 끝번호, 발표할 사람 수를 한 줄로 배치 -->
+        <div class="section input-row">
+            <div class="input-group">
+                <label for="start">시작 번호:</label>
+                <input type="number" id="start" placeholder="시작 번호">
+            </div>
+            <div class="input-group">
+                <label for="end">끝 번호:</label>
+                <input type="number" id="end" placeholder="끝 번호">
+            </div>
+            <div class="input-group">
+                <label for="numberOfPeople">발표할 사람 수:</label>
+                <input type="number" id="numberOfPeople" placeholder="숫자">
+            </div>
+        </div>
+
+        <!-- 네번째 영역: 순서 정하기 버튼 -->
+        <div class="section">
+            <button id="generateOrder">순서 정하기</button>
+        </div>
+
+        <!-- 다섯번째 영역: 결과 출력 (둥근 사각형 박스에 숫자 표시) -->
+        <div class="section result-area">
+            <p id="result">결과: </p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
