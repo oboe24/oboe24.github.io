@@ -21,9 +21,8 @@ document.getElementById('generateOrder').addEventListener('click', function() {
             alert("선택할 숫자가 부족합니다.");
             return;
         }
-        // 랜덤으로 배열에서 숫자 선택
         const randomIndex = Math.floor(Math.random() * numbers.length);
-        const selectedNumber = numbers.splice(randomIndex, 1)[0]; // 선택된 숫자를 배열에서 제거
+        const selectedNumber = numbers.splice(randomIndex, 1)[0];
         selectedNumbers.push(selectedNumber);
     }
 
