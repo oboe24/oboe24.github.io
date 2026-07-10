@@ -139,12 +139,8 @@
                 }
             };
 
-            // 처음 접속 시 주소창에 파라미터가 이미 있는 경우 처리
-            const urlParams = new URLSearchParams(window.location.search);
-            const hymnNum = urlParams.get('hymn');
-            if (hymnNum && !isNaN(hymnNum) && hymnNum >= 1 && hymnNum <= TOTAL_HYMNS) {
-                showViewer(parseInt(hymnNum));
-            }
+            // 첫 접속 시에는 무조건 리스트 페이지 상태로 초기화
+            showList();
         }
 
         // 숫자를 3자리 포맷(001, 012 등)으로 변경
@@ -158,14 +154,12 @@
             showViewer(number);
         }
 
-        // 3. 실제 뷰어 렌더링 (경로 계산 보완)
+        // 3. 실제 뷰어 렌더링
         function showViewer(number) {
-            // 현재 앱이 실행 중인 루트 경로(주소)를 계산하여 img 폴더 위치를 정확히 지정합니다.
             const basePath = window.location.origin + window.location.pathname.replace('index.html', '');
-            
-            // 끝에 슬래시(/)가 없다면 붙여주고 이미지 결합
             const cleanBasePath = basePath.endsWith('/') ? basePath : basePath + '/';
             
+            // 버튼을 누른 순간에만 이미지를 요청하도록 확실히 차단
             scoreImg.src = `${cleanBasePath}img/${padZero(number)}.jpg`;
             listPage.style.display = 'none';
             viewerPage.style.display = 'flex';
@@ -176,11 +170,14 @@
         function showList() {
             viewerPage.style.display = 'none';
             listPage.style.display = 'block';
-            scoreImg.src = ''; // 이미지 메모리 해제
+            scoreImg.src = ''; // 이미지 할당 해제 및 요청 취소
         }
 
         // 이미지 로드 실패 시 예외 처리
         function handleImageError() {
+            // 주소가 비어있을 때는 에러 팝업을 띄우지 않음
+            if (!scoreImg.src || scoreImg.src === window.location.href) return;
+            
             alert(`찬송가 악보 이미지를 불러오지 못했습니다.\n요청 주소: ${scoreImg.src}`);
             showList();
             if (history.state && history.state.view === 'viewer') {
