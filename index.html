@@ -154,15 +154,19 @@
 
         // 2. 악보 화면 열기
         function openScore(number) {
-            // 메인 도메인 환경에 맞춰 상대 경로 파라미터 적용
             history.pushState({ view: 'viewer', number: number }, `찬송가 ${number}장`, `?hymn=${number}`);
             showViewer(number);
         }
 
-        // 3. 실제 뷰어 렌더링
+        // 3. 실제 뷰어 렌더링 (경로 계산 보완)
         function showViewer(number) {
-            // 절대 경로 지정을 위해 앞에 슬래시(/) 추가
-            scoreImg.src = `/img/${padZero(number)}.jpg`;
+            // 현재 앱이 실행 중인 루트 경로(주소)를 계산하여 img 폴더 위치를 정확히 지정합니다.
+            const basePath = window.location.origin + window.location.pathname.replace('index.html', '');
+            
+            // 끝에 슬래시(/)가 없다면 붙여주고 이미지 결합
+            const cleanBasePath = basePath.endsWith('/') ? basePath : basePath + '/';
+            
+            scoreImg.src = `${cleanBasePath}img/${padZero(number)}.jpg`;
             listPage.style.display = 'none';
             viewerPage.style.display = 'flex';
             window.scrollTo(0, 0);
@@ -177,7 +181,7 @@
 
         // 이미지 로드 실패 시 예외 처리
         function handleImageError() {
-            alert(`찬송가 ${scoreImg.src.split('/').pop()} 악보 이미지를 불러오지 못했습니다.`);
+            alert(`찬송가 악보 이미지를 불러오지 못했습니다.\n요청 주소: ${scoreImg.src}`);
             showList();
             if (history.state && history.state.view === 'viewer') {
                 history.back();
