@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>새찬송가 악보 보기</title>
+    <title>새찬송가 악보 보기 (전체화면 유지)</title>
     <style>
         /* 기본 스타일 초기화 및 모바일 최적화 */
         * {
@@ -19,29 +19,52 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #121212;
             color: #ffffff;
-            overflow-x: hidden;
+            overflow: hidden; /* 스크롤은 내부 컨테이너에서 처리 */
         }
 
-        /* 전체화면 실행 버튼 (상단) */
-        #fullscreen-btn {
-            display: block;
-            width: calc(100% - 20px);
-            margin: 10px auto;
-            padding: 12px;
+        /* 앱 컨테이너 */
+        #app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* 시작 화면 (전체화면 유도) */
+        #start-page {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            background-color: #121212;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2000;
+        }
+
+        #start-btn {
+            padding: 15px 30px;
             background-color: #2ea44f;
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 18px;
             cursor: pointer;
-            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
         /* 메인 리스트 페이지 */
         #list-page {
+            display: none; /* 시작 후 표시 */
+            width: 100%;
+            height: 100%;
+            overflow-y: auto; /* 리스트 스크롤 */
             padding: 10px;
-            display: block;
         }
 
         .grid-container {
@@ -50,6 +73,7 @@
             gap: 6px;
             max-width: 800px;
             margin: 0 auto;
+            padding-bottom: 20px; /* 하단 여백 */
         }
 
         .hymn-btn {
@@ -72,15 +96,15 @@
             color: #fff;
         }
 
-        /* 악보 보기 페이지 */
+        /* 악보 뷰어 페이지 */
         #viewer-page {
-            display: none;
+            display: none; /* 평소엔 숨김 */
             width: 100%;
             height: 100%;
             background-color: #000000;
             justify-content: center;
             align-items: center;
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
             z-index: 1000;
@@ -98,49 +122,88 @@
 </head>
 <body>
 
-    <!-- 리스트 페이지 -->
-    <div id="list-page">
-        <button id="fullscreen-btn" onclick="toggleFullscreen()">전체화면으로 시작하기</button>
-        <div class="grid-container" id="grid-container">
-            <!-- 자바스크립트로 1부터 645까지 버튼 생성 -->
+    <div id="app">
+        <!-- 시작 화면 -->
+        <div id="start-page">
+            <button id="start-btn" onclick="startAppWithFullscreen()">전체화면으로 찬송가 시작하기</button>
         </div>
-    </div>
 
-    <!-- 악보 뷰어 페이지 -->
-    <div id="viewer-page">
-        <img id="score-img" src="" alt="찬송가 악보" onerror="handleImageError()">
+        <!-- 리스트 페이지 -->
+        <div id="list-page">
+            <div class="grid-container" id="grid-container">
+                <!-- 자바스크립트로 1부터 645까지 버튼 생성 -->
+            </div>
+        </div>
+
+        <!-- 악보 뷰어 페이지 -->
+        <div id="viewer-page">
+            <img id="score-img" src="" alt="찬송가 악보" onerror="handleImageError()">
+        </div>
     </div>
 
     <script>
         const TOTAL_HYMNS = 645;
         const gridContainer = document.getElementById('grid-container');
+        const startPage = document.getElementById('start-page');
         const listPage = document.getElementById('list-page');
         const viewerPage = document.getElementById('viewer-page');
         const scoreImg = document.getElementById('score-img');
 
-        // 1. 1부터 645까지 버튼 동적 생성
+        // 앱 초기화
         function init() {
+            // 1. 1부터 645까지 버튼 동적 생성
             const fragment = document.createDocumentFragment();
             for (let i = 1; i <= TOTAL_HYMNS; i++) {
                 const btn = document.createElement('button');
                 btn.className = 'hymn-btn';
                 btn.textContent = i;
-                btn.onclick = () => openScore(i);
+                btn.onclick = () => openScore(i); // 클릭 시 악보 열기
                 fragment.appendChild(btn);
             }
             gridContainer.appendChild(fragment);
 
-            // 뒤로가기/앞으로가기 등 브라우저 네비게이션 감지
+            // 2. 브라우저 내비게이션(뒤로가기) 감지 및 전체화면 유지 처리
             window.onpopstate = function(event) {
-                if (event.state && event.state.view === 'viewer') {
-                    showViewer(event.state.number);
+                // 앱 시작 시 history에 상태를 푸시하므로, 이벤트가 발생합니다.
+                if (event.state) {
+                    if (event.state.view === 'viewer') {
+                        // 악보 보기 상태로 이동
+                        showViewer(event.state.number);
+                    } else if (event.state.view === 'list') {
+                        // 리스트 상태로 돌아옴
+                        showList();
+                    }
                 } else {
-                    showList();
+                    // 상태가 없는 초기 진입 시점으로 돌아오면 앱 종료(전체화면 해제는 사용자가 제어로 해결)
+                    // 필요에 따라 시작 화면으로 돌릴 수도 있습니다.
                 }
             };
+        }
 
-            // 첫 접속 시에는 무조건 리스트 페이지 상태로 초기화
+        // 전체화면 시작 버튼 로직
+        function startAppWithFullscreen() {
+            // 사용자 인터랙션 안에서 전체화면 요청
+            const docElm = document.documentElement;
+            if (docElm.requestFullscreen) {
+                docElm.requestFullscreen();
+            } else if (docElm.mozRequestFullScreen) { /* Firefox */
+                docElm.mozRequestFullScreen();
+            } else if (docElm.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+                docElm.webkitRequestFullscreen();
+            } else if (docElm.msRequestFullscreen) { /* IE/Edge */
+                docElm.msRequestFullscreen();
+            }
+
+            // 전체화면 성공 여부와 상관없이 앱 화면 전환
+            enterListMode();
+        }
+
+        // 리스트 모드로 진입 (최초 시작 시)
+        function enterListMode() {
+            startPage.style.display = 'none';
             showList();
+            // 현재 상태를 리스트로 히스토리에 기록 (뒤로가기 시 이 시점으로 돌아옴)
+            history.replaceState({ view: 'list' }, '찬송가 리스트', '');
         }
 
         // 숫자를 3자리 포맷(001, 012 등)으로 변경
@@ -148,29 +211,33 @@
             return String(num).padStart(3, '0');
         }
 
-        // 2. 악보 화면 열기
+        // 악보 화면 열기 (리스트에서 클릭 시)
         function openScore(number) {
+            // 현재 주소 뒤에 ?hymn=번호 파라미터 추가하여 히스토리에 기록
             history.pushState({ view: 'viewer', number: number }, `찬송가 ${number}장`, `?hymn=${number}`);
+            // 전체화면 상태에서 DOM 콘텐츠만 전환
             showViewer(number);
         }
 
-        // 3. 실제 뷰어 렌더링
+        // 실제 뷰어 DOM 렌더링
         function showViewer(number) {
             const basePath = window.location.origin + window.location.pathname.replace('index.html', '');
             const cleanBasePath = basePath.endsWith('/') ? basePath : basePath + '/';
             
-            // 버튼을 누른 순간에만 이미지를 요청하도록 확실히 차단
+            // 이미지 주소 설정
             scoreImg.src = `${cleanBasePath}img/${padZero(number)}.jpg`;
+            
+            // DOM 스위칭: 리스트 숨기고 뷰어 표시
             listPage.style.display = 'none';
             viewerPage.style.display = 'flex';
-            window.scrollTo(0, 0);
         }
 
-        // 4. 리스트 화면으로 복귀
+        // 리스트 DOM으로 복귀 (뒤로가기 시 호출)
         function showList() {
+            // DOM 스위칭: 뷰어 숨기고 리스트 표시
             viewerPage.style.display = 'none';
             listPage.style.display = 'block';
-            scoreImg.src = ''; // 이미지 할당 해제 및 요청 취소
+            scoreImg.src = ''; // 이미지 할당 해제
         }
 
         // 이미지 로드 실패 시 예외 처리
@@ -180,28 +247,20 @@
             
             alert(`찬송가 악보 이미지를 불러오지 못했습니다.\n요청 주소: ${scoreImg.src}`);
             showList();
-            if (history.state && history.state.view === 'viewer') {
-                history.back();
-            }
+            // 에러 시 히스토리를 리스트 상태로 복구
+            history.back();
         }
 
-        // 5. 전체화면 기능
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().then(() => {
-                    document.getElementById('fullscreen-btn').style.display = 'none';
-                }).catch(err => {
-                    console.log(`전체화면 모드 변경 실패: ${err.message}`);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
-        // 화면 전환 시 전체화면 해제 상태 대응
+        // 전체화면 상태 변화 감지 (예외 처리용)
         document.addEventListener('fullscreenchange', () => {
             if (!document.fullscreenElement) {
-                document.getElementById('fullscreen-btn').style.display = 'block';
+                // 사용자가 전체화면을 수동으로 해제한 경우, 시작 화면을 다시 보여줄지 결정
+                // 여기서는 앱을 계속 진행하되, 스크롤 처리를 위해 overflow 스타일만 복구
+                document.body.style.overflow = 'auto';
+                document.documentElement.style.overflow = 'auto';
+            } else {
+                document.body.style.overflow = 'hidden';
+                document.documentElement.style.overflow = 'hidden';
             }
         });
 
