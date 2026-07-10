@@ -2,44 +2,203 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>랜덤 숫자 뽑기</title>
-    <link rel="stylesheet" href="styles.css?after">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>새찬송가 악보 보기</title>
+    <style>
+        /* 기본 스타일 초기화 및 모바일 최적화 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        /* 전체화면 실행 버튼 (상단) */
+        #fullscreen-btn {
+            display: block;
+            width: calc(100% - 20px);
+            margin: 10px auto;
+            padding: 12px;
+            background-color: #2ea44f;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        /* 메인 리스트 페이지 */
+        #list-page {
+            padding: 10px;
+            display: block;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr); /* 한 줄에 10개씩 배치 */
+            gap: 6px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hymn-btn {
+            background-color: #212121;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            border-radius: 4px;
+            aspect-ratio: 1 / 1; /* 정사각형 형태 유지 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .hymn-btn:active {
+            background-color: #3d3d3d;
+            color: #fff;
+        }
+
+        /* 악보 보기 페이지 */
+        #viewer-page {
+            display: none;
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        /* 세로폭에 맞추고 비율 유지 */
+        #score-img {
+            height: 100%;
+            width: auto;
+            max-width: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* 에러 메시지 스타일 */
+        .error-msg {
+            color: #ff6b6b;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <!-- 첫번째 영역: 제목 -->
-        <div class="section title">
-            <h1>발표순서정하기</h1>
-        </div>
 
-        <!-- 두번째 영역: 시작번호, 끝번호, 발표할 사람 수를 한 줄로 배치 -->
-        <div class="section input-row">
-            <div class="input-group">
-                <label for="start">시작 번호:</label>
-                <input type="number" id="start" placeholder="시작 번호">
+    <div id="list-page">
+        <button id="fullscreen-btn" onclick="toggleFullscreen()">전체화면으로 시작하기</button>
+        <div class="grid-container" id="grid-container">
             </div>
-            <div class="input-group">
-                <label for="end">끝 번호:</label>
-                <input type="number" id="end" placeholder="끝 번호">
-            </div>
-            <div class="input-group">
-                <label for="numberOfPeople">발표할 사람 수:</label>
-                <input type="number" id="numberOfPeople" placeholder="숫자">
-            </div>
-        </div>
-
-        <!-- 네번째 영역: 순서 정하기 버튼 -->
-        <div class="section">
-            <button id="generateOrder">순서 정하기</button>
-        </div>
-
-        <!-- 다섯번째 영역: 결과 출력 (둥근 사각형 박스에 숫자 표시) -->
-        <div class="section result-area">
-            <p id="result">결과: </p>
-        </div>
     </div>
 
-    <script src="script.js"></script>
+    <div id="viewer-page">
+        <img id="score-img" src="" alt="찬송가 악보" onerror="handleImageError()">
+    </div>
+
+    <script>
+        const TOTAL_HYMNS = 645;
+        const gridContainer = document.getElementById('grid-container');
+        const listPage = document.getElementById('list-page');
+        const viewerPage = document.getElementById('viewer-page');
+        const scoreImg = document.getElementById('score-img');
+
+        // 1. 1부터 645까지 버튼 동적 생성
+        function init() {
+            const fragment = document.createDocumentFragment();
+            for (let i = 1; i <= TOTAL_HYMNS; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'hymn-btn';
+                btn.textContent = i;
+                btn.onclick = () => openScore(i);
+                fragment.appendChild(btn);
+            }
+            gridContainer.appendChild(fragment);
+
+            // 뒤로가기/앞으로가기 등 브라우저 네비게이션 감지
+            window.onpopstate = function(event) {
+                if (event.state && event.state.view === 'viewer') {
+                    showViewer(event.state.number);
+                } else {
+                    showList();
+                }
+            };
+        }
+
+        // 숫자를 3자리 포맷(001, 012 등)으로 변경
+        function padZero(num) {
+            return String(num).padStart(3, '0');
+        }
+
+        // 2. 악보 화면 열기
+        function openScore(number) {
+            // 브라우저 히스토리에 상태 추가 (뒤로가기 버튼 활성화용)
+            history.pushState({ view: 'viewer', number: number }, `찬송가 ${number}장`, `?hymn=${number}`);
+            showViewer(number);
+        }
+
+        // 3. 실제 뷰어 렌더링
+        function showViewer(number) {
+            scoreImg.src = `img/${padZero(number)}.jpg`;
+            listPage.style.display = 'none';
+            viewerPage.style.display = 'flex';
+            window.scrollTo(0, 0);
+        }
+
+        // 4. 리스트 화면으로 복귀
+        function showList() {
+            viewerPage.style.display = 'none';
+            listPage.style.display = 'block';
+            scoreImg.src = ''; // 이미지 메모리 해제
+        }
+
+        // 이미지 로드 실패 시 예외 처리
+        function handleImageError() {
+            alert('악보 이미지 파일(img/xxx.jpg)을 찾을 수 없습니다.');
+            history.back(); // 자동으로 리스트로 복귀
+        }
+
+        // 5. 전체화면 기능 (웹앱 조건 만족)
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    document.getElementById('fullscreen-btn').style.display = 'none';
+                }).catch(err => {
+                    console.log(`전체화면 모드 변경 실패: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // 화면 전환 시 전체화면 해제 상태 대응
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                document.getElementById('fullscreen-btn').style.display = 'block';
+            }
+        });
+
+        // 초기화 실행
+        init();
+    </script>
 </body>
 </html>
