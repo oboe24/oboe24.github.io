@@ -94,23 +94,19 @@
             object-fit: contain;
             display: block;
         }
-
-        /* 에러 메시지 스타일 */
-        .error-msg {
-            color: #ff6b6b;
-            text-align: center;
-            padding: 20px;
-        }
     </style>
 </head>
 <body>
 
+    <!-- 리스트 페이지 -->
     <div id="list-page">
         <button id="fullscreen-btn" onclick="toggleFullscreen()">전체화면으로 시작하기</button>
         <div class="grid-container" id="grid-container">
-            </div>
+            <!-- 자바스크립트로 1부터 645까지 버튼 생성 -->
+        </div>
     </div>
 
+    <!-- 악보 뷰어 페이지 -->
     <div id="viewer-page">
         <img id="score-img" src="" alt="찬송가 악보" onerror="handleImageError()">
     </div>
@@ -142,6 +138,13 @@
                     showList();
                 }
             };
+
+            // 처음 접속 시 주소창에 파라미터가 이미 있는 경우 처리
+            const urlParams = new URLSearchParams(window.location.search);
+            const hymnNum = urlParams.get('hymn');
+            if (hymnNum && !isNaN(hymnNum) && hymnNum >= 1 && hymnNum <= TOTAL_HYMNS) {
+                showViewer(parseInt(hymnNum));
+            }
         }
 
         // 숫자를 3자리 포맷(001, 012 등)으로 변경
@@ -151,14 +154,15 @@
 
         // 2. 악보 화면 열기
         function openScore(number) {
-            // 브라우저 히스토리에 상태 추가 (뒤로가기 버튼 활성화용)
+            // 메인 도메인 환경에 맞춰 상대 경로 파라미터 적용
             history.pushState({ view: 'viewer', number: number }, `찬송가 ${number}장`, `?hymn=${number}`);
             showViewer(number);
         }
 
         // 3. 실제 뷰어 렌더링
         function showViewer(number) {
-            scoreImg.src = `img/${padZero(number)}.jpg`;
+            // 절대 경로 지정을 위해 앞에 슬래시(/) 추가
+            scoreImg.src = `/img/${padZero(number)}.jpg`;
             listPage.style.display = 'none';
             viewerPage.style.display = 'flex';
             window.scrollTo(0, 0);
@@ -173,11 +177,14 @@
 
         // 이미지 로드 실패 시 예외 처리
         function handleImageError() {
-            alert('악보 이미지 파일(img/xxx.jpg)을 찾을 수 없습니다.');
-            history.back(); // 자동으로 리스트로 복귀
+            alert(`찬송가 ${scoreImg.src.split('/').pop()} 악보 이미지를 불러오지 못했습니다.`);
+            showList();
+            if (history.state && history.state.view === 'viewer') {
+                history.back();
+            }
         }
 
-        // 5. 전체화면 기능 (웹앱 조건 만족)
+        // 5. 전체화면 기능
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().then(() => {
